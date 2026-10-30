@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>تأكسي إسكندرية - النسخة المخصصة</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body { background-color: #111; color: #fff; overflow: hidden; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* شاشة القائمة الرئيسية */
+        #main-menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), url('https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80') no-repeat center center/cover; z-index: 100; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
+        .menu-header { display: flex; justify-content: space-between; align-items: center; }
+        .logo-title { font-size: 1.8rem; font-weight: bold; color: #ffcc00; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        .user-profile { background: rgba(0,0,0,0.6); border: 2px solid #ffcc00; padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+        
+        .menu-body { display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: auto; width: 100%; }
+        .mode-card { background: rgba(20, 20, 20, 0.85); border: 2px solid #333; border-radius: 12px; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.3s; }
+        .mode-card:hover { border-color: #ffcc00; transform: scale(1.02); }
+        .mode-info h3 { color: #ffcc00; font-size: 1.2rem; margin-bottom: 5px; }
+        .mode-info p { color: #ccc; font-size: 0.8rem; }
+        .mode-arrow { font-size: 1.5rem; color: #ffcc00; }
+
+        /* واجهة اللعب الداخلية */
+        #game-ui { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
+        .interactive { pointer-events: auto; }
+        .top-hud { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; border: 1px solid #ffcc00; }
+        
+        #controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; align-items: end; }
+        .control-btn { background: rgba(255, 204, 0, 0.85); color: #000; border: none; width: 70px; height: 70px; border-radius: 50%; font-size: 1.5rem; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        .control-btn:active { background: #ffaa00; transform: scale(0.95); }
+        #engine-btn { background: #ff3300; color: #fff; width: 90px; height: 90px; font-size: 1.1rem; grid-column: 2; justify-self: center; border-radius: 50%; border: none; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        
+        /* شاشة الجراج */
+        #garage-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10,10,10,0.95); z-index: 50; display: none; flex-direction: column; padding: 20px; overflow-y: auto; }
+        .garage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .car-card { background: #222; border: 2px solid #444; border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; }
+        .car-card.active { border-color: #ffcc00; }
+        .car-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 5px; margin-bottom: 8px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- القائمة الرئيسية -->
+    <div id="main-menu">
+        <div class="menu-header">
+            <div class="logo-title">تأكسي إسكندرية</div>
+            <div class="user-profile">
+                <span>مارتن (مستخدم)</span>
+                <span style="color: #00ff00;">● متصل</span>
+            </div>
+        </div>
+
+        <div class="menu-body">
+            <div class="mode-card" onclick="openGarage('checkpoint')">
+                <div class="mode-info">
+                    <h3>كمين شرطة</h3>
+                    <p>جديد - أنت الظابط: الرخص يا أسطى</p>
+                </div>
+                <div class="mode-arrow">➔</div>
+            </div>
+
+            <div class="mode-card" onclick="openGarage('ganna')">
+                <div class="mode-info">
+                    <h3>عريس جنة</h3>
+                    <p>جديد - موتوسيكل على الكورنيش مالوش آخر</p>
+                </div>
+                <div class="mode-arrow">➔</div>
+            </div>
+
+            <div class="mode-card" onclick="openGarage('freeroam')">
+                <div class="mode-info">
+                    <h3>عالم حر</h3>
+                    <p>تاكسي سابقاً، تاكسي، موتوسيكل، مشروع</p>
+                </div>
+                <div class="mode-arrow">➔</div>
+            </div>
+
+            <div class="mode-card" onclick="openGarage('racing')">
+                <div class="mode-info">
+                    <h3>سباق</h3>
+                    <p>جديد - اربح حلبات واحدة 5 متسابقين</p>
+                </div>
+                <div class="mode-arrow">➔</div>
+            </div>
+        </div>
+        <div style="text-align: center; color: #777; font-size: 0.8rem;">1261 playing now - من بحري للمنتزه</div>
+    </div>
+
+    <!-- شاشة الجراج واختيار العربيات -->
+    <div id="garage-screen">
+        <h2 style="color: #ffcc00; margin-bottom: 10px;">الجراج - اختر مركبتك</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; border-radius: 8px;">
+            <span>فلوسك: 6,629 ج.م</span>
+            <button onclick="closeGarage()" style="background: red; color: #fff; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">رجوع ✖</button>
+        </div>
+        <div class="garage-grid">
+            <div class="car-card active" onclick="selectCar('Lada')">
+                <div style="background:#444; height:90px; display:flex; align-items:center; justify-content:center; color:#ffcc00; font-weight:bold;">لادا 2107</div>
+                <h4>لادا 2107</h4>
+                <p style="color:#00ff00; font-size:0.8rem;">بنستوقها</p>
+            </div>
+            <div class="car-card" onclick="selectCar('Peugeot')">
+                <div style="background:#444; height:90px; display:flex; align-items:center; justify-content:center; color:#ffcc00; font-weight:bold;">بيجو 504</div>
+                <h4>بيجو 504 سبعة راكب</h4>
+                <p style="color:#ffaa00; font-size:0.8rem;">25,000 ج.م</p>
+            </div>
+            <div class="car-card" onclick="selectCar('Verna')">
+                <div style="background:#444; height:90px; display:flex; align-items:center; justify-content:center; color:#ffcc00; font-weight:bold;">فيرنا</div>
+                <h4>هيونداي فيرنا</h4>
+                <p style="color:#ffaa00; font-size:0.8rem;">50,000 ج.م</p>
+            </div>
+            <div class="car-card" onclick="selectCar('W124')">
+                <div style="background:#444; height:90px; display:flex; align-items:center; justify-content:center; color:#ffcc00; font-weight:bold;">مرسيدس W124</div>
+                <h4>مرسيدس W124</h4>
+                <p style="color:#ffaa00; font-size:0.8rem;">40,000 ج.م</p>
+            </div>
+        </div>
+        <button onclick="startActualGame()" style="margin-top: 20px; background: #ffcc00; color: #000; border: none; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 10px; cursor: pointer;">يلا بينا - ستارت 🚀</button>
+    </div>
+
+    <!-- واجهة اللعبة -->
+    <div id="game-ui">
+        <div class="top-hud interactive">
+            <div id="hud-mode">المود: -</div>
+            <div id="hud-speed">0 كم/س</div>
+            <button onclick="returnToMenu()" style="background:#444; color:#fff; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">تغيير المود</button>
+        </div>
+
+        <div id="controls">
+            <button class="control-btn interactive" ontouchstart="setSteer(-1)" ontouchend="setSteer(0)">⬅️</button>
+            <button id="engine-btn" class="control-btn interactive" ontouchstart="revEngine()">مببررررم!</button>
+            <button class="control-btn interactive" ontouchstart="setSteer(1)" ontouchend="setSteer(0)">➡️</button>
+            <button class="control-btn interactive" style="grid-column: 2; width:100%; border-radius:10px; background:#ffcc00;" ontouchstart="setSpeed(1)" ontouchend="setSpeed(0)">بنزين ⬆️</button>
+        </div>
+    </div>
+
+    <audio id="rev-sound" src="https://www.soundboard.com/mediafiles/mz/MTUxNzEzODk1MTUxNzMxMw==SGVsbG8sIGhlbGxvLCBoZWxsby4u.mp3" preload="auto"></audio>
+
+    <script>
+        let scene, camera, renderer, carMesh;
+        let selectedMode = '';
+        let speed = 0, targetSpeed = 0, steer = 0;
+        let clock = new THREE.Clock();
+
+        function openGarage(mode) {
+            selectedMode = mode;
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('garage-screen').style.display = 'flex';
+        }
+
+        function closeGarage() {
+            document.getElementById('garage-screen').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+        }
+
+        function selectCar(carName) {
+            document.querySelectorAll('.car-card').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function startActualGame() {
+            document.getElementById('garage-screen').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'flex';
+            document.getElementById('hud-mode').innerText = 'المود: ' + selectedMode;
+            if(!scene) init3DScene();
+        }
+
+        function returnToMenu() {
+            document.getElementById('game-ui').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+        }
+
+        function init3DScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4, -10);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            // تصميم الشارع
+            const roadGeo = new THREE.PlaneGeometry(15, 1000);
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const road = new THREE.Mesh(roadGeo, roadMat);
+            road.rotation.x = -Math.PI / 2;
+            scene.add(road);
+
+            // العربية بتاعتك
+            const carGeo = new THREE.BoxGeometry(2, 1, 4);
+            const carMat = new THREE.MeshStandardMaterial({ color: 0xffcc00 });
+            carMesh = new THREE.Mesh(carGeo, carMat);
+            carMesh.position.set(0, 0.5, 0);
+            scene.add(carMesh);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate();
+        }
+
+        function setSteer(val) { steer = val; }
+        function setSpeed(val) { targetSpeed = val * 0.4; }
+
+        function revEngine() {
+            const audio = document.getElementById('rev-sound');
+            audio.currentTime = 0;
+            audio.play();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            let delta = clock.getDelta();
+
+            if (speed < targetSpeed) speed += delta * 0.2;
+            if (speed > targetSpeed) speed -= delta * 0.2;
+
+            carMesh.position.x += steer * delta * 5;
+            carMesh.position.z += speed * 20;
+            camera.position.x = carMesh.position.x;
+            camera.position.z = carMesh.position.z - 10;
+
+            document.getElementById('hud-speed').innerText = Math.floor(Math.abs(speed * 150)) + ' كم/س';
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
